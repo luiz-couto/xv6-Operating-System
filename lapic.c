@@ -66,7 +66,7 @@ lapicinit(void)
   // TICR would be calibrated using an external time source.
   lapicw(TDCR, X1);
   lapicw(TIMER, PERIODIC | (T_IRQ0 + IRQ_TIMER));
-  lapicw(TICR, INTERV * 10000000);  //Task 3: setting new preemption interval
+  lapicw(TICR, INTERV * 250000);  //Task 3: setting new preemption interval
 
   // Disable logical interrupt lines.
   lapicw(LINT0, MASKED);
