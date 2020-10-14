@@ -149,6 +149,11 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+
+  //Set default priority and aging
+  p->priority = 2;
+  p->time_0TO1 = 0;
+  p->time_1TO2 = 0;
   
   // Set start ctime, stime, retime, rutime
   p->ctime = ticks;
@@ -221,6 +226,11 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+
+  //Set default priority and aging
+  np->priority = 2;
+  np->time_0TO1 = 0;
+  np->time_1TO2 = 0;
 
   // Set start ctime, stime, retime, rutime
   np->ctime = ticks;
@@ -334,7 +344,7 @@ wait(void)
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p, *aux;
   struct cpu *c = mycpu();
   c->proc = 0;
   
@@ -342,12 +352,28 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
+    // high_prio will contain the first highest priority process found
+    struct proc *high_prio;
+
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
+      //To compare with all other process, other loop over process table comparing priority
+      high_prio = p;
+
+      for(aux = ptable.proc; aux < &ptable.proc[NPROC]; aux++){
+        if(aux->state != RUNNABLE)
+          continue;
+        
+        if(high_prio->priority < aux->priority)
+          high_prio = aux;
+      }
+
+      p = high_prio;
+      
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -545,6 +571,19 @@ procdump(void)
   }
 }
 
+// Setting a new priority for the current process
+int
+set_prio(int priority)
+{
+  struct proc *p = myproc();
+
+  acquire(&ptable.lock);
+  p->priority = priority;
+  release(&ptable.lock);
+
+  return 24;
+}
+
 int
 wait2(int* retime, int* rutime, int* stime)
 {
@@ -605,6 +644,31 @@ void updateTimes() {
   // Loop over process table.
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+
+    // Aging: check if a process needs to change its priority queue
+    switch (p->priority){
+
+      case 0:
+        if(p->time_0TO1 == AGING_NUM){
+          p->time_0TO1 = 0;
+          p->priority++;
+        }
+        else
+          p->time_0TO1++;
+        break;
+      
+      case 1:
+        if(p->time_1TO2 == AGING_NUM){
+          p->time_1TO2 = 0;
+          p->priority++;
+        }
+        else
+          p->time_1TO2++;
+        break;
+      
+      default:
+        break;
+    }
 
     // Add time to current process state
     if (p->state == RUNNABLE) p->retime++;

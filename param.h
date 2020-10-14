@@ -12,3 +12,4 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       1000  // size of file system in blocks
 #define INTERV       5   // number of clock-ticks for preemption interval
+#define AGING_NUM    15  // number of clock-ticks for a process to rise in priority
