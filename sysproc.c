@@ -85,6 +85,8 @@ sys_set_prio(void){
 
   if(set_prio(priority) == 24)
     return 0;
+  
+  return -1;
 }
 
 
